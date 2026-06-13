@@ -43,8 +43,8 @@
       </div>
     </header>
 
-    <main class="app-main">
-      <aside class="panel panel-left" aria-label="Pass index">
+    <main class="app-main" data-view="atlas">
+      <aside class="panel panel-left" data-view-section="atlas" aria-label="Pass index">
         <div class="panel-header">
           <div class="panel-eyebrow">Index</div>
           <h2 class="panel-title">Seven Passes</h2>
@@ -63,7 +63,7 @@
         </div>
       </aside>
 
-      <section class="map-stage" aria-label="Map of North East India">
+      <section class="map-stage" data-view-section="atlas" aria-label="Map of North East India">
         <div class="map-frame" id="mapFrame">
           <div class="map-corner map-corner-tl"></div>
           <div class="map-corner map-corner-tr"></div>
@@ -98,7 +98,6 @@
             </defs>
 
             <rect width="1000" height="1000" fill="url(#gridPattern)" opacity="0.4"/>
-            <g id="gridLines"></g>
             <g id="regions"></g>
             <g id="regionLabels"></g>
             <g id="borders"></g>
@@ -131,7 +130,7 @@
         </div>
       </section>
 
-      <aside class="panel panel-right" aria-label="Pass details" aria-live="polite">
+      <aside class="panel panel-right" data-view-section="atlas" aria-label="Pass details" aria-live="polite">
         <div class="panel-header">
           <div class="panel-eyebrow">Detail</div>
           <h2 class="panel-title">Selected Pass</h2>
@@ -155,6 +154,26 @@
           </button>
         </div>
       </aside>
+
+      <!-- Reference View (hidden by default) -->
+      <section class="view-reference" data-view-section="reference" hidden>
+        <div class="reference-container">
+          <div class="reference-eyebrow">Reference</div>
+          <h1 class="reference-title">Quick Reference Card</h1>
+          <p class="reference-sub">All seven strategic passes at a glance</p>
+          <div class="reference-grid" id="referenceGrid"></div>
+        </div>
+      </section>
+
+      <!-- Index View (hidden by default) -->
+      <section class="view-index" data-view-section="index" hidden>
+        <div class="index-container">
+          <div class="index-eyebrow">Index</div>
+          <h1 class="index-title">Alphabetical Index</h1>
+          <p class="index-sub">All passes sorted alphabetically</p>
+          <div class="index-list" id="indexList"></div>
+        </div>
+      </section>
     </main>
 
     <footer class="app-footer">

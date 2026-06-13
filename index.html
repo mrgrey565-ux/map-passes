@@ -1,15 +1,18 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Interactive atlas of strategic mountain passes in North East India">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Interactive atlas of strategic mountain passes in North East India with annotation support">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Strategic Passes Atlas — North East India</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Cormorant+Garamond:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="annotation.css">
 </head>
 <body>
   <div class="app">
@@ -26,14 +29,21 @@
         <button class="nav-btn" data-view="reference" type="button">Reference</button>
         <button class="nav-btn" data-view="index" type="button">Index</button>
       </nav>
-      <div class="header-meta">
-        <span class="meta-key">Edition</span>
-        <span class="meta-val">I · 2026</span>
+      <div class="header-actions">
+        <button class="icon-btn" id="annotateToggle" type="button" aria-label="Toggle annotation mode" aria-pressed="false" title="Annotation Mode (A)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/>
+          </svg>
+          <span>Annotate</span>
+        </button>
+        <div class="header-meta">
+          <span class="meta-key">Edition</span>
+          <span class="meta-val">I · 2026</span>
+        </div>
       </div>
     </header>
 
     <main class="app-main">
-      <!-- Left: Index -->
       <aside class="panel panel-left" aria-label="Pass index">
         <div class="panel-header">
           <div class="panel-eyebrow">Index</div>
@@ -53,9 +63,8 @@
         </div>
       </aside>
 
-      <!-- Center: Map -->
       <section class="map-stage" aria-label="Map of North East India">
-        <div class="map-frame">
+        <div class="map-frame" id="mapFrame">
           <div class="map-corner map-corner-tl"></div>
           <div class="map-corner map-corner-tr"></div>
           <div class="map-corner map-corner-bl"></div>
@@ -97,6 +106,12 @@
             <rect width="1000" height="1000" fill="url(#vignette)" pointer-events="none"/>
           </svg>
 
+          <div class="annotation-host" id="annotationHost" aria-hidden="true">
+            <canvas id="annotationCanvas"></canvas>
+            <div class="annotation-shape-layer" id="shapeLayer"></div>
+            <div class="annotation-text-layer" id="textLayer"></div>
+          </div>
+
           <div class="map-legend-bl">
             <div class="compass" aria-hidden="true">
               <div class="compass-ring"></div>
@@ -116,7 +131,6 @@
         </div>
       </section>
 
-      <!-- Right: Detail -->
       <aside class="panel panel-right" aria-label="Pass details" aria-live="polite">
         <div class="panel-header">
           <div class="panel-eyebrow">Detail</div>
@@ -157,6 +171,95 @@
         <span class="footer-val">07</span>
       </div>
     </footer>
+  </div>
+
+  <div class="annot-toolbar" id="annotToolbar" hidden aria-label="Annotation tools">
+    <div class="tool-group">
+      <button class="tool-btn is-active" data-tool="pen" type="button" aria-label="Pen" title="Pen (P)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/>
+        </svg>
+      </button>
+      <button class="tool-btn" data-tool="highlighter" type="button" aria-label="Highlighter" title="Highlighter (H)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l-6 6v3h9l3-3"/><path d="M22 12l-4.6 4.6a2 2 0 0 1-2.8 0L11 13l4-4 3 3a2 2 0 0 0 2.8 0L22 12z"/>
+        </svg>
+      </button>
+      <button class="tool-btn" data-tool="eraser" type="button" aria-label="Eraser" title="Eraser (E)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 20H7L3 16a2 2 0 0 1 0-2.8L13 3l8 8-9 9"/><path d="M13 3l8 8"/>
+        </svg>
+      </button>
+      <button class="tool-btn" data-tool="text" type="button" aria-label="Text" title="Text (T)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>
+        </svg>
+      </button>
+    </div>
+    <div class="tool-divider"></div>
+    <div class="tool-group">
+      <button class="tool-btn" data-tool="line" type="button" aria-label="Line" title="Line (L)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 19L19 5"/></svg>
+      </button>
+      <button class="tool-btn" data-tool="rect" type="button" aria-label="Rectangle" title="Rectangle (R)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
+      </button>
+      <button class="tool-btn" data-tool="ellipse" type="button" aria-label="Ellipse" title="Ellipse (O)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>
+      </button>
+      <button class="tool-btn" data-tool="arrow" type="button" aria-label="Arrow" title="Arrow (A)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5"/><path d="M11 5h8v8"/></svg>
+      </button>
+    </div>
+    <div class="tool-divider"></div>
+    <div class="tool-group">
+      <div class="color-picker" role="radiogroup" aria-label="Color">
+        <button class="color-swatch is-active" data-color="#f0d9a8" style="--swatch:#f0d9a8" type="button" role="radio" aria-checked="true" aria-label="Parchment"></button>
+        <button class="color-swatch" data-color="#e85d5d" style="--swatch:#e85d5d" type="button" role="radio" aria-checked="false" aria-label="Crimson"></button>
+        <button class="color-swatch" data-color="#5dbfe8" style="--swatch:#5dbfe8" type="button" role="radio" aria-checked="false" aria-label="Azure"></button>
+        <button class="color-swatch" data-color="#7fe87a" style="--swatch:#7fe87a" type="button" role="radio" aria-checked="false" aria-label="Emerald"></button>
+        <button class="color-swatch" data-color="#e8d05d" style="--swatch:#e8d05d" type="button" role="radio" aria-checked="false" aria-label="Amber"></button>
+        <button class="color-swatch" data-color="#c87fe8" style="--swatch:#c87fe8" type="button" role="radio" aria-checked="false" aria-label="Violet"></button>
+        <button class="color-swatch" data-color="#ffffff" style="--swatch:#ffffff" type="button" role="radio" aria-checked="false" aria-label="White"></button>
+      </div>
+    </div>
+    <div class="tool-divider"></div>
+    <div class="tool-group">
+      <div class="stroke-control">
+        <label class="stroke-label" for="strokeSize">Size</label>
+        <input type="range" id="strokeSize" min="1" max="20" value="3" class="stroke-range" aria-label="Stroke size">
+        <span class="stroke-value" id="strokeValue">3</span>
+      </div>
+    </div>
+    <div class="tool-divider"></div>
+    <div class="tool-group">
+      <button class="tool-btn" id="undoBtn" type="button" aria-label="Undo" title="Undo (⌘Z / Ctrl+Z)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
+      </button>
+      <button class="tool-btn" id="redoBtn" type="button" aria-label="Redo" title="Redo (⌘⇧Z / Ctrl+Shift+Z)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg>
+      </button>
+      <button class="tool-btn" id="clearBtn" type="button" aria-label="Clear all" title="Clear All">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+    </div>
+    <div class="tool-divider"></div>
+    <div class="tool-group">
+      <button class="tool-btn" id="layersBtn" type="button" aria-label="Layers" title="Layers">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="layers-panel" id="layersPanel" hidden aria-label="Annotation layers">
+    <div class="layers-header">
+      <div class="layers-title">Layers</div>
+      <button class="layers-close" id="layersClose" type="button" aria-label="Close layers panel">×</button>
+    </div>
+    <div class="layers-list" id="layersList"></div>
+    <div class="layers-footer">
+      <button class="layers-action" id="addLayerBtn" type="button">+ New Layer</button>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>

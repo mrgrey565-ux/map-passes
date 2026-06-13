@@ -1,0 +1,164 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive atlas of strategic mountain passes in North East India">
+  <title>Strategic Passes Atlas — North East India</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Cormorant+Garamond:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">◇</div>
+        <div class="brand-text">
+          <div class="brand-title">North East India</div>
+          <div class="brand-subtitle">Strategic Passes Atlas</div>
+        </div>
+      </div>
+      <nav class="app-nav" aria-label="Primary">
+        <button class="nav-btn is-active" data-view="atlas" type="button">Atlas</button>
+        <button class="nav-btn" data-view="reference" type="button">Reference</button>
+        <button class="nav-btn" data-view="index" type="button">Index</button>
+      </nav>
+      <div class="header-meta">
+        <span class="meta-key">Edition</span>
+        <span class="meta-val">I · 2026</span>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- Left: Index -->
+      <aside class="panel panel-left" aria-label="Pass index">
+        <div class="panel-header">
+          <div class="panel-eyebrow">Index</div>
+          <h2 class="panel-title">Seven Passes</h2>
+          <div class="panel-sub">Select to view detail</div>
+        </div>
+        <div class="panel-body">
+          <ul class="pass-list" id="passList" role="listbox" aria-label="Strategic passes"></ul>
+        </div>
+        <div class="panel-footer">
+          <div class="counter">
+            <span id="counterCurrent">01</span>
+            <span class="counter-sep">/</span>
+            <span id="counterTotal">07</span>
+          </div>
+          <div class="counter-label">of passes shown</div>
+        </div>
+      </aside>
+
+      <!-- Center: Map -->
+      <section class="map-stage" aria-label="Map of North East India">
+        <div class="map-frame">
+          <div class="map-corner map-corner-tl"></div>
+          <div class="map-corner map-corner-tr"></div>
+          <div class="map-corner map-corner-bl"></div>
+          <div class="map-corner map-corner-br"></div>
+
+          <div class="map-legend-tl">
+            <div class="legend-title">Coordinate Grid</div>
+            <div class="legend-sub">N 27° · E 92°</div>
+          </div>
+          <div class="map-legend-tr">
+            <div class="legend-title">Scale</div>
+            <div class="legend-sub">1 : 2,400,000</div>
+          </div>
+
+          <svg class="map-svg" id="mapSvg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map showing the location of seven strategic mountain passes">
+            <defs>
+              <pattern id="gridPattern" width="50" height="50" patternUnits="userSpaceOnUse">
+                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="var(--border-subtle)" stroke-width="0.5"/>
+              </pattern>
+              <radialGradient id="vignette" cx="50%" cy="50%" r="50%">
+                <stop offset="60%" stop-color="transparent"/>
+                <stop offset="100%" stop-color="var(--bg)" stop-opacity="0.4"/>
+              </radialGradient>
+              <filter id="markerGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+
+            <rect width="1000" height="1000" fill="url(#gridPattern)" opacity="0.4"/>
+            <g id="gridLines"></g>
+            <g id="regions"></g>
+            <g id="regionLabels"></g>
+            <g id="borders"></g>
+            <g id="markers"></g>
+            <rect width="1000" height="1000" fill="url(#vignette)" pointer-events="none"/>
+          </svg>
+
+          <div class="map-legend-bl">
+            <div class="compass" aria-hidden="true">
+              <div class="compass-ring"></div>
+              <div class="compass-needle">N</div>
+            </div>
+          </div>
+          <div class="map-legend-br">
+            <div class="legend-row">
+              <span class="legend-swatch swatch-active"></span>
+              <span>Active Pass</span>
+            </div>
+            <div class="legend-row">
+              <span class="legend-swatch swatch-region"></span>
+              <span>State Boundary</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Detail -->
+      <aside class="panel panel-right" aria-label="Pass details" aria-live="polite">
+        <div class="panel-header">
+          <div class="panel-eyebrow">Detail</div>
+          <h2 class="panel-title">Selected Pass</h2>
+          <div class="panel-sub" id="detailState">Awaiting selection</div>
+        </div>
+        <div class="panel-body">
+          <div class="detail" id="detailContent">
+            <div class="detail-empty">
+              <div class="detail-empty-mark" aria-hidden="true">◇</div>
+              <div class="detail-empty-title">No pass selected</div>
+              <div class="detail-empty-sub">Choose a marker on the map or an item from the index to view its strategic profile.</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-footer">
+          <button class="action-btn" id="prevBtn" type="button" aria-label="Previous pass">
+            <span aria-hidden="true">←</span> Previous
+          </button>
+          <button class="action-btn" id="nextBtn" type="button" aria-label="Next pass">
+            Next <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer-cell">
+        <span class="footer-key">Status</span>
+        <span class="footer-val" id="statusIndicator">Ready</span>
+      </div>
+      <div class="footer-cell footer-center">
+        <span class="footer-key">Source</span>
+        <span class="footer-val">Survey of India · Open Reference</span>
+      </div>
+      <div class="footer-cell footer-right">
+        <span class="footer-key">Total Passes</span>
+        <span class="footer-val">07</span>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

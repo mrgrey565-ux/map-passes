@@ -8,7 +8,8 @@ const VIEWBOX = { width: 1000, height: 1000 };
 const state = {
   activeId: null,
   passes: PASSES,
-  isAnnotating: false
+  isAnnotating: false,
+  currentView: 'atlas'
 };
 
 const els = {
@@ -16,7 +17,6 @@ const els = {
   markers: document.getElementById('markers'),
   regions: document.getElementById('regions'),
   regionLabels: document.getElementById('regionLabels'),
-  gridLines: document.getElementById('gridLines'),
   detailContent: document.getElementById('detailContent'),
   detailState: document.getElementById('detailState'),
   counterCurrent: document.getElementById('counterCurrent'),
@@ -41,34 +41,17 @@ const els = {
   layersPanel: document.getElementById('layersPanel'),
   layersList: document.getElementById('layersList'),
   layersClose: document.getElementById('layersClose'),
-  addLayerBtn: document.getElementById('addLayerBtn')
+  addLayerBtn: document.getElementById('addLayerBtn'),
+  // Reference / Index views
+  referenceGrid: document.getElementById('referenceGrid'),
+  indexList: document.getElementById('indexList')
 };
 
 let engine = null;
 
 /* ============================================================
-   SVG Construction
+   SVG Construction (Grid handled by SVG pattern - no manual lines)
    ============================================================ */
-
-function buildGrid() {
-  const frag = document.createDocumentFragment();
-  const step = 50;
-  for (let i = step; i < VIEWBOX.width; i += step) {
-    const v = document.createElementNS(SVG_NS, 'line');
-    v.setAttribute('x1', i); v.setAttribute('y1', 0);
-    v.setAttribute('x2', i); v.setAttribute('y2', VIEWBOX.height);
-    v.setAttribute('class', 'grid-line');
-    frag.appendChild(v);
-  }
-  for (let i = step; i < VIEWBOX.height; i += step) {
-    const h = document.createElementNS(SVG_NS, 'line');
-    h.setAttribute('x1', 0); h.setAttribute('y1', i);
-    h.setAttribute('x2', VIEWBOX.width); h.setAttribute('y2', i);
-    h.setAttribute('class', 'grid-line');
-    frag.appendChild(h);
-  }
-  els.gridLines.appendChild(frag);
-}
 
 function buildRegions() {
   const regionFrag = document.createDocumentFragment();
@@ -150,6 +133,74 @@ function buildPassList() {
   els.counterTotal.textContent = String(state.passes.length).padStart(2, '0');
 }
 
+function buildReferenceView() {
+  if (!els.referenceGrid) return;
+  els.referenceGrid.innerHTML = state.passes.map(p => `
+    <article class="ref-card" data-id="${p.id}" tabindex="0" role="button" aria-label="${p.name}">
+      <div class="ref-card-header">
+        <div class="ref-card-state">${p.state}</div>
+        <div class="ref-card-elev">${p.elevation}</div>
+      </div>
+      <h3 class="ref-card-name">${p.name}</h3>
+      <p class="ref-card-sig">${p.significance}</p>
+    </article>
+  `).join('');
+}
+
+function buildIndexView() {
+  if (!els.indexList) return;
+  const sorted = [...state.passes].sort((a, b) => a.name.localeCompare(b.name));
+  const grouped = {};
+  sorted.forEach(p => {
+    const letter = p.name[0].toUpperCase();
+    if (!grouped[letter]) grouped[letter] = [];
+    grouped[letter].push(p);
+  });
+  els.indexList.innerHTML = Object.keys(grouped).sort().map(letter => `
+    <div class="index-group">
+      <div class="index-letter">${letter}</div>
+      <ul class="index-items">
+        ${grouped[letter].map(p => `
+          <li class="index-item" data-id="${p.id}" tabindex="0" role="button">
+            <span class="index-item-name">${p.name}</span>
+            <span class="index-item-state">${p.state}</span>
+            <span class="index-item-elev">${p.elevation}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   View Switching (Atlas / Reference / Index)
+   ============================================================ */
+
+function switchView(viewName) {
+  if (state.currentView === viewName) return;
+  state.currentView = viewName;
+
+  els.appMain.dataset.view = viewName;
+
+  // Toggle nav button active state
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.view === viewName);
+  });
+
+  // Show/hide sections
+  document.querySelectorAll('[data-view-section]').forEach(section => {
+    const show = section.dataset.viewSection === viewName;
+    section.hidden = !show;
+  });
+
+  if (els.status) els.status.textContent = `View: ${viewName.charAt(0).toUpperCase() + viewName.slice(1)}`;
+
+  // Exit annotation mode when leaving atlas
+  if (viewName !== 'atlas' && state.isAnnotating) {
+    toggleAnnotationMode(false);
+  }
+}
+
 /* ============================================================
    Selection
    ============================================================ */
@@ -157,6 +208,7 @@ function buildPassList() {
 function select(id, { scroll = false } = {}) {
   if (!id) return;
   if (state.isAnnotating) return;
+  if (state.currentView !== 'atlas') return;
 
   state.activeId = id;
   const idx = state.passes.findIndex(p => p.id === id);
@@ -237,6 +289,7 @@ function computeTags(pass) {
 }
 
 function navigate(direction) {
+  if (state.currentView !== 'atlas') return;
   const idx = state.passes.findIndex(p => p.id === state.activeId);
   if (idx === -1) return;
   let nextIdx;
@@ -250,6 +303,7 @@ function navigate(direction) {
    ============================================================ */
 
 function toggleAnnotationMode(force) {
+  if (state.currentView !== 'atlas') return;
   const next = force !== undefined ? force : !state.isAnnotating;
   state.isAnnotating = next;
 
@@ -317,18 +371,32 @@ function toggleLayersPanel(force) {
    ============================================================ */
 
 function attachEvents() {
-  // Pass list
+  // ----- Pass list (scoped keyboard nav) -----
   els.passList.addEventListener('click', e => {
     const item = e.target.closest('.pass-item');
     if (item) select(item.dataset.id);
   });
+
+  // SCOPED keyboard nav for the list
   els.passList.addEventListener('keydown', e => {
-    const item = e.target.closest('.pass-item');
-    if (!item) return;
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(item.dataset.id); }
+    const items = Array.from(els.passList.querySelectorAll('.pass-item'));
+    const currentIndex = items.findIndex(el => el === document.activeElement);
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      const item = e.target.closest('.pass-item');
+      if (item) { e.preventDefault(); select(item.dataset.id); }
+    } else if (e.key === 'ArrowDown' || e.key === 'j') {
+      e.preventDefault();
+      const next = items[(currentIndex + 1) % items.length];
+      if (next) next.focus();
+    } else if (e.key === 'ArrowUp' || e.key === 'k') {
+      e.preventDefault();
+      const prev = items[(currentIndex - 1 + items.length) % items.length];
+      if (prev) prev.focus();
+    }
   });
 
-  // Markers
+  // ----- Markers -----
   els.markers.addEventListener('click', e => {
     const marker = e.target.closest('.marker');
     if (marker) select(marker.dataset.id);
@@ -339,7 +407,8 @@ function attachEvents() {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(marker.dataset.id); }
   });
 
-  // Global keyboard
+  // ----- Global keyboard (only for view switching, escape, and annotation shortcuts) -----
+  // NOTE: ArrowUp/ArrowDown are NO LONGER hijacked globally to allow native scrolling.
   document.addEventListener('keydown', e => {
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
@@ -359,21 +428,48 @@ function attachEvents() {
       else if ((e.key === 'a' || e.key === 'A') && !e.metaKey && !e.ctrlKey) { setTool('arrow'); }
       else if (e.key === 'Escape') { toggleAnnotationMode(false); }
     } else {
-      if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); navigate('next'); }
-      else if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); navigate('prev'); }
-      else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); toggleAnnotationMode(true); }
+      // Annotation toggle: A key (works anywhere)
+      if (e.key === 'a' || e.key === 'A') {
+        if (state.currentView === 'atlas') {
+          e.preventDefault();
+          toggleAnnotationMode(true);
+        }
+      }
     }
   });
 
+  // ----- Navigation buttons (prev/next pass) -----
   els.prevBtn.addEventListener('click', () => navigate('prev'));
   els.nextBtn.addEventListener('click', () => navigate('next'));
 
+  // ----- Top nav (Atlas / Reference / Index) -----
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('is-active'));
-      btn.classList.add('is-active');
+      switchView(btn.dataset.view);
     });
   });
+
+  // Reference cards click → switch to atlas and select
+  if (els.referenceGrid) {
+    els.referenceGrid.addEventListener('click', e => {
+      const card = e.target.closest('.ref-card');
+      if (card) {
+        switchView('atlas');
+        select(card.dataset.id);
+      }
+    });
+  }
+
+  // Index items click → switch to atlas and select
+  if (els.indexList) {
+    els.indexList.addEventListener('click', e => {
+      const item = e.target.closest('.index-item');
+      if (item) {
+        switchView('atlas');
+        select(item.dataset.id);
+      }
+    });
+  }
 
   /* ----- Annotation events ----- */
 
@@ -432,10 +528,12 @@ function attachEvents() {
    ============================================================ */
 
 function init() {
-  buildGrid();
+  // NOTE: buildGrid() removed - SVG <pattern> in index.html handles the grid
   buildRegions();
   buildMarkers();
   buildPassList();
+  buildReferenceView();
+  buildIndexView();
   attachEvents();
 
   engine = new AnnotationEngine({
